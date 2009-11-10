@@ -50,4 +50,8 @@ void add_snake_element_to_board(PosnType posn);
 void remove_food_item_from_board(PosnType posn);
 void add_food_item_to_board(PosnType posn);
 
+//4209435
+/* redraws the board after it has been cleared */
+void render_board(void);
+
 #endif

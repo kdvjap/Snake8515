@@ -6,9 +6,19 @@
 ** Details of the snake and making it move.
 */
 
+#include "position.h" //17 Oct
 #include "snake.h"
 #include "board.h"
 #include "food.h"
+#include "wall.h"
+
+//for debugging
+#include "led_display.h"
+#include "terminalio.h"
+#include <stdio.h>
+#include <avr/pgmspace.h>
+#include "timer.h"
+//
 
 /* Global variables */
 /* We store the snake in a circular buffer - an array which can 
@@ -43,6 +53,7 @@ int8_t snakeTailIndex;
 int8_t curSnakeDirn;
 int8_t nextSnakeDirn;
 
+
 /* FUNCTIONS */
 /* init_snake()
 **
@@ -55,14 +66,14 @@ void init_snake(void) {
 	*/
 	snakeTailIndex = 0;
 	snakeHeadIndex = 2;
-	snakePositions[0] = position(0,0);
-	snakePositions[1] = position(0,1);
-	snakePositions[2] = position(0,2);
+	snakePositions[0] = 0x00;
+	snakePositions[1] = 0x01;
+	snakePositions[2] = 0x02;
 	curSnakeDirn = UP;
     nextSnakeDirn = UP;
-	add_snake_element_to_board(position(0,0));
-	add_snake_element_to_board(position(0,1));
-	add_snake_element_to_board(position(0,2));
+	add_snake_element_to_board(0x00);
+	add_snake_element_to_board(0x01);
+	add_snake_element_to_board(0x02);
 }
 
 /* get_snake_head_position()
@@ -84,7 +95,7 @@ int8_t get_snake_length(void) {
 	*/
 	len = snakeHeadIndex - snakeTailIndex + 1;
 	if (len <= 0) {
-		len += 32;
+		len += MAX_SNAKE_SIZE; //17Oct
 	}
 	return len;
 }
@@ -95,7 +106,7 @@ int8_t get_snake_length(void) {
 **      Attempt to move the snake by one in the new direction.
 **      Returns -1 (OUT_OF_BOUNDS) if the snake has run into the 
 **		edge, -2 (COLLISION) if the snake has run into itself,
-**      0 (MOVE_OK) if the move is successful, 1 (ATE_FOOD)
+**      1 (MOVE_OK) if the move is successful, 2 (ATE_FOOD)
 **		if the snake has eaten
 **      some food (and grown). (The snake will only grow if
 ** 		there is room for it to do so in the array.).
@@ -107,8 +118,8 @@ int8_t move_snake(void) {
 	PosnType headPosn;
     
 	/* Current head position */
-	headX = x_position(snakePositions[snakeHeadIndex]);
-	headY = y_position(snakePositions[snakeHeadIndex]);
+	headX = (snakePositions[snakeHeadIndex] >> 4) & 0x07;
+	headY = snakePositions[snakeHeadIndex] & 0x0F;
     
     /* Work out where the new head position should be - we
     ** move 1 position in our NEXT direction of movement.
@@ -120,7 +131,12 @@ int8_t move_snake(void) {
         case RIGHT:
             headX += 1;
             break;
-		/* YOUR CODE HERE to deal with other directions */
+        case DOWN:
+            headY -= 1;
+            break;
+        case LEFT:
+            headX -= 1;
+            break;
     }
 
 	headPosn = position(headX, headY);
@@ -131,8 +147,11 @@ int8_t move_snake(void) {
 	/* ADD CODE HERE to check whether the new head position
 	** is off the board, and if so return OUT_OF_BOUNDS. Do
 	** not continue. See board.h for a function which can help you.
-	*/    
-   
+	*/
+	
+	if(is_off_board((get_snake_head_position() >> 4) & 0x07, 
+				    get_snake_head_position() & 0x0F))
+		return OUT_OF_BOUNDS;
 
 
 	/* ADD CODE HERE to check whether the new head position
@@ -140,6 +159,48 @@ int8_t move_snake(void) {
 	** COLLISION. Do not continue. See snake.h for a function 
 	** which can help you.
 	*/
+	/*
+	if(is_snake_at(headPosn))
+		return COLLISION;
+	//*/
+
+	//4209435
+	/* Modification of above to impliment Tail-Cut
+	** Instead of returning COLLISION, cut the tail at the
+	** point of collision and save it as a wall
+	*/
+	int8_t c_index;
+	c_index = is_snake_at(headPosn);
+	if(c_index){
+		uint8_t start;
+		uint8_t stop;
+		extern int8_t wallInsertionIndex;
+		//store the start of the wall
+		start = wallInsertionIndex;
+
+		//copy from snake to collision point to wall array
+		//while trimming the snake along the way
+		while(snakeTailIndex < c_index){
+			add_wall_at(snakePositions[snakeTailIndex++]);
+		}
+		//store the end of the wall
+		stop = wallInsertionIndex - start;
+		start = 0;
+		
+		//we just built a wall so flag it for deletion
+		flag_wall(position(start, stop));
+
+	}
+	//*/
+
+
+	//4209435
+	/* Check if there is a wall at the head position
+	** If there is, return COLLISION
+	** This helps implement Tail-Cut functionality
+	*/
+	if(is_wall_at(headPosn))
+		return COLLISION;
 
 
 
@@ -182,6 +243,20 @@ int8_t move_snake(void) {
 	/* YOUR CODE HERE to (1) if the snake ate food and if so, to remove the 
 	** food, add a new item of food and return ATE_FOOD.
 	*/
+	if(foodAtHead != -1){
+		/*for debugging *
+		move_cursor(1, 15);
+		printf_P(PSTR("foodID: %u"), foodAtHead );
+		wait_for(1000);
+		//*/
+		remove_food(foodAtHead);
+
+		//increase the length of the snake unless snake is 40 segments
+		if(get_snake_length() < 40)
+			--snakeTailIndex;
+
+		return ATE_FOOD;
+	}
 
 	/* Otherwise we return MOVE_OK, indicating that the move was
 	** successful.
@@ -207,8 +282,28 @@ int8_t set_snake_dirn(int8_t dirn) {
 	** Initially, we assume the move is OK and just set the 
 	** next direction.
 	*/
-    
-    nextSnakeDirn = dirn;
+    switch (dirn) {
+    case UP:
+        if(curSnakeDirn != DOWN)
+		 	nextSnakeDirn = dirn;
+		else
+			return 0;
+    case RIGHT:
+        if(curSnakeDirn != LEFT)
+			nextSnakeDirn = dirn;
+		else
+			return 0;
+    case DOWN:
+        if(curSnakeDirn != UP)
+			nextSnakeDirn = dirn;
+		else
+			return 0;
+    case LEFT:
+        if(curSnakeDirn != RIGHT)
+			nextSnakeDirn = dirn;
+		else
+			return 0;
+    }
     return 1;
 
 }
@@ -217,6 +312,7 @@ int8_t set_snake_dirn(int8_t dirn) {
 **		Check all snake positions and see if any part of the 
 **		snake is at the given position
 */
+
 int8_t is_snake_at(PosnType position) {
 	int8_t index;
 
@@ -225,12 +321,14 @@ int8_t is_snake_at(PosnType position) {
 	index = snakeTailIndex;
 	while(index != snakeHeadIndex) {
 		if(position == snakePositions[index]) {
-			return 1;
+			//return 1;
+			//4209435
+			return index;
 		}
 		index++;
-		if(index > MAX_SNAKE_SIZE) {
+		if(index == MAX_SNAKE_SIZE) { //19 Oct
 			index = 0;
-		}
+		} 
 	}
 	/* Now check head position, since it is not checked above. */
 	if(position == snakePositions[snakeHeadIndex]) {
@@ -239,4 +337,27 @@ int8_t is_snake_at(PosnType position) {
 	/* Snake does not occupy the given position */
 	return 0;
 }
-		
+
+//4209435
+void show_snake(void) {
+	int8_t i;
+
+	//hack to fix a jump by one after pausing
+	snakeHeadIndex--;
+	snakeTailIndex--;
+
+	for(i=0; i < MAX_SNAKE_SIZE; i++) {
+
+		//only do it for visible elements
+		//snake hasn't wrapped around
+		if(snakeHeadIndex > snakeTailIndex) {
+			if( i <= snakeHeadIndex && i >= snakeTailIndex)
+				add_snake_element_to_board(snakePositions[i]);
+		}
+		//snake has wrapped around
+		else {
+			if( i <= snakeHeadIndex || i >= snakeTailIndex)
+				add_snake_element_to_board(snakePositions[i]);
+		}
+	}
+}

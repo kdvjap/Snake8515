@@ -59,4 +59,23 @@ int8_t add_food_items(int8_t numberItems);
 */
 void remove_food(int8_t foodID);
 
+/* 42094353 show_food(void)
+**
+** Display all the food on the board
+*/
+void show_food(void);
+
+void hide_food(void);
+
+void blink_food(void);
+
+void food_to_rat(void);
+
+void move_rats(void);
+
+PosnType reverse_direction(int8_t, int8_t);
+
+/* http://www.daniweb.com/code/snippet216329.html by "vegaseat" */
+uint16_t rand2(uint16_t);
+
 #endif

@@ -9,10 +9,12 @@
 #include "position.h"
 #include "board.h"
 #include "led_display.h"
-#include "score.h"
+//#include "score.h" //16 OCT
 #include "snake.h"
 #include "food.h"
 #include <stdio.h>
+//4209435
+#include "wall.h"
 
 /* Functions available within this file */
 static void turn_on_led_at(int8_t x, int8_t y);
@@ -36,7 +38,7 @@ void init_board(void) {
 */
 void remove_snake_element_from_board(PosnType posn) {
 	if(food_at(posn) == -1) {
-		turn_off_led_at(x_position(posn), y_position(posn));
+		turn_off_led_at((posn >> 4) & 0x07, posn & 0x0F);
 	}
 }
 
@@ -46,7 +48,7 @@ void remove_snake_element_from_board(PosnType posn) {
 ** position.
 */
 void add_snake_element_to_board(PosnType posn) {
-	turn_on_led_at(x_position(posn), y_position(posn));
+	turn_on_led_at((posn >> 4) & 0x07, posn & 0x0F);
 }
 
 /* Remove food item from the board. 
@@ -56,7 +58,7 @@ void add_snake_element_to_board(PosnType posn) {
 */
 void remove_food_item_from_board(PosnType posn) {
 	if(!is_snake_at(posn)) {
-		turn_off_led_at(x_position(posn), y_position(posn));
+		turn_off_led_at((posn >> 4) & 0x07, posn & 0x0F);
 	}
 }
 
@@ -65,7 +67,7 @@ void remove_food_item_from_board(PosnType posn) {
 ** This function will turn on the LED at the given position.
 */
 void add_food_item_to_board(PosnType posn) {
-	turn_on_led_at(x_position(posn), y_position(posn));
+	turn_on_led_at((posn >> 4) & 0x07, posn & 0x0F);
 }
 
 
@@ -101,4 +103,11 @@ static void turn_off_led_at(int8_t x, int8_t y) {
 	row = x;
 	colBitPosn = y;
 	display[row] &= ~(1<<colBitPosn);
+}
+
+//4209435
+void render_board(void){
+	show_food();
+	show_snake();
+	show_walls();
 }

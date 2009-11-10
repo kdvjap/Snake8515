@@ -14,7 +14,6 @@
 volatile uint16_t display[NUM_ROWS];
 
 void init_display(void) {
-	uint8_t i;
 
 	/* Set ports A and B to be outputs (except most significant
 	 * bit of port A) */
@@ -25,6 +24,13 @@ void init_display(void) {
 	DDRC |= 0x07;
 
 	/* Empty the display */
+	empty_display();
+}
+
+//4209435
+/* refactored init_display to make some code reusable */
+void empty_display(void){
+	uint8_t i;
 	for(i=0; i<NUM_ROWS; i++) {
 		display[i] = 0;
 	}

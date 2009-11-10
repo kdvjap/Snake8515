@@ -39,4 +39,8 @@ void display_row(void);
 	 * millisecond or two.
 	 */
 
+//4209435
+/* turns off all LEDs */
+void empty_display(void);
+
 #endif

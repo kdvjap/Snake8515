@@ -5,4 +5,11 @@ Description:
 	A snake game designed for the AVR8515 microprocessor. Written in AVR Studio using the AVR C Library http://www.nongnu.org/avr-libc/user-manual/index.html
 
 Files:
+	CSSE1000_2009_project.pdf -- Design specification and grading scheme
+	Simulator/snake.smx -- Simulation file for use with the embedded system
+		simulator found at http://www.itee.uq.edu.au/~csse1000/assessment/project/simulator.html
+	Project/* -- C Source files for the snake game
+
+
+
 

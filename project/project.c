@@ -17,6 +17,30 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+//42094353
+#include "sound.h"
+#include "food.h"
+#include "wall.h"
+#include "savestate.h"
+
+#define SPLASHBOXSTARTY 6
+#define SPLASHBOXENDY	16
+#define SPLASHBOXSTARTX 20
+#define SPLASHBOXENDX	60
+#define TITLEX			38
+#define TITLEY			8
+#define NAMEX			22
+#define NAMEY			11
+#define IDX				22
+#define IDY				13
+#define INSTRUCTY		18
+#define NEWGAME			0
+#define PAUSE			2
+#define	GAMEOVER		-1
+#define PLAYING			1
+#define BLINKRATE		100
+#define RATSPEED		921
+ 
 
 /*
 ** Function prototypes - these are defined below main()
@@ -25,9 +49,16 @@ void new_game(void);
 void splash_screen(void);
 void handle_game_over(void);
 void time_increment(void);
+//4209435
+void show_instruction(int8_t);
+void update_score(void);
+void pause_game(void);
 
 volatile uint8_t timePassedFlag = 0;
 int8_t mainTimerNum;
+//4209435
+int8_t foodTimerNum;
+int8_t ratsTimerNum;
 
 /*
  * main -- Main program.
@@ -55,6 +86,10 @@ int main(void) {
 	*/
 	mainTimerNum = execute_function_periodically(500, time_increment);
 
+	//4209435
+	/* setup AVR to handle sounds*/
+	init_sound();
+
 	/*
 	** Turn on interrupts (needed for timer and serial input/output to work)
 	*/
@@ -64,6 +99,7 @@ int main(void) {
 	** Display splash screen 
 	*/
 	splash_screen();
+	show_instruction(NEWGAME);
 	
 	/*
 	** Perform necessary initialisations for a new game.
@@ -103,7 +139,22 @@ int main(void) {
 					** be moved to RIGHT */
 					set_snake_dirn(RIGHT);
 				}  
-				/* YOUR CODE HERE TO DEAL WITH OTHER DIRECTIONS */
+				if (c == 'D') {
+					/* Cursor left key pressed - Set next direction to
+					** be moved to LEFT */
+					set_snake_dirn(LEFT);
+				}  
+				if (c == 'A') {
+					/* Cursor up key pressed - Set next direction to
+					** be moved to UP */
+					set_snake_dirn(UP);
+				}  
+				if (c == 'B') {
+					/* Cursor down key pressed - Set next direction to
+					** be moved to DOWN */
+					set_snake_dirn(DOWN);
+				}
+
 				/* else, unknown escape sequence */
 
 				/* We're no longer part way through an escape sequence */
@@ -118,22 +169,33 @@ int main(void) {
 			} else if (c == ' ') {
 				/* Space character received - move snake immediately */
 				moveStatus = move_snake();
-			} else {
-				/*
-				** Some other character received. Handle it (or ignore it).
-				*/
-								
-				/*
-				** YOUR CODE HERE TO CHECK FOR OTHER KEY PRESSES
-				** AND TAKE APPROPRIATE ACTION. You may need to 
-				** add code in other locations also.
-				*/
+			} else {					
+				if(c == 'N' || c == 'n'){	
+					show_instruction(NEWGAME);				
+					new_game();
+				} else if(c == 'P' || c == 'p'){
+					moveStatus = 0;
+					pause_game();
+				} else if(c == 'M' || c == 'm'){
+					toggle_sound();
+					display_sound_status();
+				}
 			}
 		}
+
+		switch(moveStatus){
+			case ATE_FOOD:
+				if(sound_status())
+					play_sound();
+				moveStatus = MOVE_OK;
+				break;
+		}
+
 		if(moveStatus < 0) {
 			/* Move failed - game over */
 			handle_game_over();
 			moveStatus = 0;
+			update_score();
 		}
 	}
 }
@@ -144,21 +206,68 @@ void time_increment(void) {
 }
 
 void new_game(void) {
-	/* 
-	** Initialise the LED display and internal representations.
-	*/
+	char c = 0;
+	cancel_software_timer(foodTimerNum);
+	cancel_software_timer(ratsTimerNum);
+	empty_display();
+
+	//wait for space
+	while(c != ' ' && c != 'l' && c != 'L'){
+		if(input_available())
+			c = fgetc(stdin);
+
+		if(c == 'M' || c == 'm'){
+			toggle_sound();
+			display_sound_status();
+			c = 0;
+		}
+	}
+	
 	init_display();
-	init_board();
-	init_score();
+	
+	if(c == 'l' || c == 'L'){
+		if(load_state())
+			render_board();
+		else {
+			/* Initialise internal representations. */
+			init_board();
+			init_score();
+		}
+	}
+	else {
+		/* Initialise internal representations. */
+		init_board();
+		init_score();
+	}
+	clear_terminal();
+
+	//Place scores
+	update_score();
+
+	//place sound status
+	display_sound_status();
+
+	show_instruction(PLAYING);
+
+	/* Make food blink 5 times a second. We should call blink_food
+	** 10 times a second which is 100ms
+	*/
+	foodTimerNum = execute_function_periodically(BLINKRATE, blink_food);
+	ratsTimerNum = execute_function_periodically(RATSPEED, move_rats);
+
+	/* Debug *
+	move_cursor(0, TITLEY-1);
+	printf_P(PSTR("new_game %u"), get_score());
+	wait_for(1000);
+	//*/
 }
 
 void splash_screen(void) {
 
 	/* Clear the terminal screen */
 	clear_terminal();
-	
-	/* YOUR CODE HERE - replace/modify the following */
-	printf_P(PSTR("Snake\n"));
+	init_score();
+	update_score();
 
 	/* 
 	** Display some suitable message to the user that includes your name(s)
@@ -166,22 +275,93 @@ void splash_screen(void) {
 	** You may need to use terminalio functions to position the cursor 
 	** appropriately - see terminalio.h for details.
 	*/
+	display_sound_status();
 
-	/* Add a wait for a space bar to be pressed. See the code above for how
-	** input characters can be dealt with.
-	*/
+	move_cursor(0,TITLEY);
+	printf_P(PSTR("Snake\n\nBy: Justin Mancinelli\n\nID: 42094353"));
+	//move_cursor(NAMEX,NAMEY);
+	//printf_P(PSTR(""));
+	//move_cursor(IDX,IDY);
+	//printf_P(PSTR(""));
+
 }
 
-/* Initially, this function is not called from anywhere */
-void handle_game_over(void) {
-	/* Print "Game over" to the terminal */
-	printf_P(PSTR("Game over")); 
+void show_instruction(int8_t status){
+	move_cursor(1, INSTRUCTY + 1);
+	clear_to_end_of_line();
+	move_cursor(1, INSTRUCTY);
+	clear_to_end_of_line();
+	
+	switch(status){
+		case NEWGAME:	
+			printf_P(PSTR("Welcome! Press 'space' to start a new game.\nPress 'L' to to load a saved game."));
+			//printf_P(PSTR("Press 'L' to to load a saved game."));
+			break;
+		case GAMEOVER:
+			printf_P(PSTR("Game Over! Press 'space' to start a new game.\nPress 'L' to to load a saved game."));
+			//printf_P(PSTR("Press 'L' to to load a saved game."));
+			break;
+		case PAUSE:
+			printf_P(PSTR("Paused... Press 'P' to continue.\nPress 'S' to save game state."));
+			//printf_P(PSTR("Press 'S' to save game state."));
+			break;
+		case PLAYING:
+			move_cursor(1, TITLEY);
+			clear_to_end_of_line();
+			move_cursor(1, INSTRUCTY);
+			printf_P(PSTR("Have fun! Press 'N' to start a new game.\nPress 'P' to to pause the game."));
+			//printf_P(PSTR("Press 'P' to to pause the game."));
+			break;
+	}			
+}
 
-	/* ADD/MODIFY CODE BELOW to start a new game and show the splash screen 
-	** again.
+void handle_game_over(void) {
+	cancel_software_timer(foodTimerNum);
+	cancel_software_timer(ratsTimerNum);
+	splash_screen();	
+	show_instruction(GAMEOVER);
+	new_game();
+}
+
+void pause_game() {
+	/*
+	** status = 0, game is running
+	** status = 1, game is paused
 	*/
-	/* The code below turns off our time_increment timer - which stops 
-	** the snake moving (on a timed basis). You will need to remove this
-	** code. */
-	cancel_software_timer(mainTimerNum);
+	static uint8_t status = 0;
+	char c = 0;
+
+	if(status) {
+		move_cursor(28, TITLEY);
+		clear_to_end_of_line();
+		show_instruction(PLAYING);
+		render_board();
+		foodTimerNum = execute_function_periodically(BLINKRATE, blink_food);
+		ratsTimerNum = execute_function_periodically(RATSPEED, move_rats);
+		status = 0;
+	}
+	else {
+		show_instruction(PAUSE);
+		cancel_software_timer(foodTimerNum);
+		cancel_software_timer(ratsTimerNum);
+		empty_display();
+		status = 1;
+
+		while(c != 'p' && c != 'P'){
+			if(input_available())
+				c = fgetc(stdin);
+
+			if(c == 's' || c == 'S'){
+				save_state();
+				//move_cursor(0, TITLEY);
+				//clear_to_end_of_line();
+				move_cursor(28, TITLEY);
+				printf_P(PSTR("State has been saved."));
+				c = 0;
+			}
+
+		}
+		pause_game();
+
+	}
 }

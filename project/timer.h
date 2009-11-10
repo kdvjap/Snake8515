@@ -32,27 +32,7 @@ extern volatile uint16_t time;
 ** The timer numbers range from 1 to NUM_SW_TIMERS. (This number
 ** can be adjusted if necessary but must fit in a uint8_t type.)
 */
-#define NUM_SW_TIMERS 4
-
-/*
-** Start a software timer with the given number (in the 
-** range of 0 to MAX_SW_TIMER). The given function (timerFunction)
-** will be called when the timer reaches the given target duration
-** (in milliseconds - up to 65534). 
-** If the once flag is true, this happens only
-** once and the timer is stopped. If the once flag is false, then
-** the timer is reset to 0 and the count is repeated. This happens
-** until the timer is stopped or restarted. The target duration is
-** expected to be greater than 0. If 0, then the timer is stopped.
-** (These functions assume the operation of the hardware timer
-** (timer/counter 0) and associated interrupt handler.)
-**
-** [NOTE that software timer functions will be executed from
-** within an interrupt service routine and should NOT access/modify
-** variables that can also be modified from non ISR code unless
-** interrupts are disabled whilst the variables are modified from
-** non ISR code.]
-*/
+#define NUM_SW_TIMERS 8
 
 /* The following type definition is the type of functions that can
 ** be registered to be executed periodically, i.e., such functions
