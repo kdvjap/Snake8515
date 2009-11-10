@@ -1,0 +1,117 @@
+<project>
+  <name>Snake</name>
+  <author>Simulator: James McGill</author>
+  
+  <!-- Prac one uses 8 switches and 8 LEDs --> 
+  <components>
+    <component name="Atmel" type="Atmel" x="60" y="265">
+      <property key="source" value="default\project.hex"/>
+    </component>
+    <component name="Terminal" type="UsartTerminal" x="165" y="50">
+      <property key="baud" value="19200"/>
+    </component>
+    <component name="LedMatrix" type="LedMatrix" x="60" y="110">
+      <property key="orientation" value="Portrait"/>
+    </component>
+    <component name="Speaker" type="Speaker" x="165" y="131"/>
+  </components>
+
+  <!-- Define  a series of connection connections. -->
+  <connections>
+    <connection>
+      <pin component="Speaker" pin="0"/>
+      <pin component="Atmel" pin="14"/>
+    </connection>
+    <connection>
+      <pin component="Speaker" pin="1"/>
+      <pin component="Atmel" pin="13"/>
+    </connection>  
+    <connection>
+      <pin component="Terminal" pin="0"/>
+      <pin component="Atmel" pin="10"/>      
+    </connection>
+    <connection>
+      <pin component="Terminal" pin="1"/>
+      <pin component="Atmel" pin="9"/>
+    </connection>
+    
+    <!-- Led Matrix row multiplexer -->
+    <connection>
+      <pin component="LedMatrix" pin="0"/>
+      <pin component="Atmel" pin="20"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="1"/>
+      <pin component="Atmel" pin="21"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="2"/>
+      <pin component="Atmel" pin="22"/>
+    </connection>
+
+    <!-- Led Matrix columns 0:7 connect to PortB 0:7 -->
+    <connection>
+      <pin component="LedMatrix" pin="3"/>
+      <pin component="Atmel" pin="0"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="4"/>
+      <pin component="Atmel" pin="1"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="5"/>
+      <pin component="Atmel" pin="2"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="6"/>
+      <pin component="Atmel" pin="3"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="7"/>
+      <pin component="Atmel" pin="4"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="8"/>
+      <pin component="Atmel" pin="5"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="9"/>
+      <pin component="Atmel" pin="6"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="10"/>
+      <pin component="Atmel" pin="7"/>
+    </connection>
+
+    <!-- Led Matrix columns 8:15 connect to PortA 0:7 -->
+    <!-- Note: Port A is reversed in the Atmel component -->
+    <connection>
+      <pin component="LedMatrix" pin="11"/>
+      <pin component="Atmel" pin="31"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="12"/>
+      <pin component="Atmel" pin="32"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="13"/>
+      <pin component="Atmel" pin="33"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="14"/>
+      <pin component="Atmel" pin="34"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="15"/>
+      <pin component="Atmel" pin="35"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="16"/>
+      <pin component="Atmel" pin="36"/>
+    </connection>
+    <connection>
+      <pin component="LedMatrix" pin="17"/>
+      <pin component="Atmel" pin="37"/>
+    </connection>
+  </connections>
+</project>
